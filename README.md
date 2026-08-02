@@ -1,12 +1,23 @@
-![GitHub release](https://img.shields.io/github/v/release/elmerdu69/ha-biopool)
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.x-blue)
-![License](https://img.shields.io/github/license/elmerdu69/ha-biopool)
+<p align="center">
+  <img src="images/banner.png" alt="BioPool for Home Assistant">
+</p>
 
-# BioPool for Home Assistant
+<h1 align="center">
+BioPool for Home Assistant
+</h1>
 
-Home Assistant custom integration for **BioPool Connect** pool controllers.
+<p align="center">
+Monitor and control your BioPool installation directly from Home Assistant.
+</p>
 
-This integration allows you to monitor and control your BioPool installation directly from Home Assistant.
+<p align="center">
+
+  ![GitHub release](https://img.shields.io/github/v/release/elmerdu69/ha-biopool)
+  ![GitHub Downloads](https://img.shields.io/github/downloads/elmerdu69/ha-biopool/total)
+  ![GitHub stars](https://img.shields.io/github/stars/elmerdu69/ha-biopool)
+  ![GitHub License](https://img.shields.io/github/license/elmerdu69/ha-biopool)
+
+</p>
 
 ---
 
@@ -123,27 +134,29 @@ The integration creates:
 
 ### Devices
 
-*Add a screenshot of the Home Assistant device page here.*
+The integration automatically creates five Home Assistant devices.
 
-```
-images/devices.png
-```
+<p align="center">
+  <img src="images/devices.png" width="700">
+</p>
+
 
 ### Dashboard
 
-*Add a screenshot of your Home Assistant dashboard here.*
+Example Lovelace dashboard.
 
-```
-images/dashboard.png
-```
+<p align="center">
+  <img src="images/dashboard.png" width="700">
+</p>
+
 
 ### Energy Dashboard
 
-*Add a screenshot showing the UV lamp energy consumption.*
+The filtration pump and UV lamp expose energy sensors compatible with the Home Assistant Energy Dashboard.
 
-```
-images/energy.png
-```
+<p align="center">
+  <img src="images/energy.png" width="700">
+</p>
 
 ---
 
