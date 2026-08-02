@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">
-BioPool for Home Assistant
+BioPool Connect Integration for Home Assistant
 </h1>
 
 <p align="center">
