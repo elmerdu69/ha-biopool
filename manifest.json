@@ -1,0 +1,17 @@
+{
+  "domain": "biopool",
+  "name": "BioPool",
+  "codeowners": [
+    "@elmerdu69"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/elmerdu69/ha-biopool",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/elmerdu69/ha-biopool/issues",
+  "loggers": [
+    "custom_components.biopool"
+  ],
+  "requirements": [],
+  "version": "1.0.0"
+}

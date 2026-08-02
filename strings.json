@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connexion à BioPool",
+        "description": "Configurez votre installation BioPool.",
+        "data": {
+          "username": "Adresse e-mail",
+          "password": "Mot de passe"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connexion impossible",
+      "unknown": "Erreur inattendue"
+    },
+    "abort": {
+      "already_configured": "Cette installation est déjà configurée"
+    }
+  }
+}
