@@ -11,6 +11,8 @@ from homeassistant.helpers.aiohttp_client import (
     async_get_clientsession,
 )
 
+from .settings import BioPoolSettings
+
 from .const import (
     BASE_URL,
     CMD_POWER,
@@ -29,6 +31,7 @@ from .const import (
     PARAM_MODE,
     PARAM_OXY_SIZE,
     POOL_MODES,
+    PARAM_FORCE_TEMP,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -146,6 +149,10 @@ class BioPoolDevice:
 
         return self.definition["remaining_sensor"]
 
+    @property
+    def settings(self):
+        return self.api.settings
+    
     def update_from_json(
         self,
         raw: dict,
@@ -186,62 +193,69 @@ class BioPoolDevice:
         # Valeur "consumed"
         #
         try:
-            consumed = float(
+            self.consumed = float(
                 raw.get("consumed", 0)
             )
         except (TypeError, ValueError):
-            consumed = 0
-
-        bacter_size = float(
-            data.get(
-                PARAM_BACTER_SIZE,
-                DEFAULT_BACTER_SIZE,
-            )
-        )
-
-        oxy_size = float(
-            data.get(
-                PARAM_OXY_SIZE,
-                DEFAULT_OXY_SIZE,
-            )
-        )
+            self.consumed = 0
 
         #
         # Calculs spécifiques
         #
         if self.function == FUNCTION_PUMP:
 
-            self.runtime_h = consumed
+            self.runtime_h = int(
+                self.consumed
+            )
+
             self.remaining = None
 
         elif self.function == FUNCTION_REACTOR:
 
             self.runtime_h = 0
 
-            self.remaining = (
-                consumed
-                / DEFAULT_UV_LIFETIME
-                * 100
+            self.remaining = max(
+                0,
+                min(
+                    100,
+                    (
+                        self.consumed
+                        / self.settings.uv_lifetime
+                        * 100
+                    ),
+                ),
             )
 
         elif self.function == FUNCTION_BACTER:
 
             self.runtime_h = 0
 
-            self.remaining = (
-                consumed
-                / bacter_size
-                * 100
+            self.remaining = max(
+                0,
+                min(
+                    100,
+                    (
+                        self.consumed
+                        / self.settings.bacter_size
+                        * 100
+                    ),
+                ),
             )
 
         elif self.function == FUNCTION_OXY:
 
             self.runtime_h = 0
 
-            self.remaining = (
-                consumed
-                / oxy_size
-                * 100
+            self.remaining = max(
+                0,
+                min(
+                    100,
+                    (
+                        self.consumed
+                        / self.settings.oxy_size
+                        * 100
+                    ),
+                ),
             )
 
         #
@@ -269,8 +283,9 @@ class BioPoolAPI:
     def __init__(
         self,
         hass,
-        username: str,
-        password: str,
+        username,
+        password,
+        options,
     ):
 
         self.hass = hass
@@ -283,6 +298,13 @@ class BioPoolAPI:
         )
 
         self._equipment_id: str | None = None
+
+        self.settings = BioPoolSettings(
+            options
+        )
+
+        self.forced_temperature = None
+        self.last_forced_temperature = None
 
         #
         # Equipements découverts
@@ -364,6 +386,28 @@ class BioPoolAPI:
 
         return self
 
+    async def set_forced_temperature(
+        self,
+        temperature: float | None,
+    ):
+        """Set or clear forced water temperature."""
+
+        if temperature is None:
+
+            await self._post_command(
+                {
+                    PARAM_FORCE_TEMP: None,
+                }
+            )
+
+        else:
+
+            await self._post_command(
+                {
+                    PARAM_FORCE_TEMP: f"{temperature:.1f}",
+                }
+            )
+
     def get_device(
         self,
         function: str,
@@ -421,16 +465,24 @@ class BioPoolAPI:
         if self._equipment_id is None:
             await self.login()
 
+        #
+        # Supprime les paramètres à None.
+        # Cela permet par exemple de retirer
+        # "force_temp" du contrôleur.
+        #
+        params = {
+            key: value
+            for key, value in params.items()
+            if value is not None or key == PARAM_FORCE_TEMP
+        }
+
         payload = {
             "db": "true",
             "name": self._equipment_id,
             "params": json.dumps(params),
         }
 
-        _LOGGER.debug(
-            "POST command: %s",
-            payload,
-        )
+        _LOGGER.debug("POST command: %s", payload)
 
         async with self._session.post(
             f"{BASE_URL}/api/bioconnect/command/{self._equipment_id}",
@@ -568,6 +620,31 @@ class BioPoolAPI:
                 parameter: enabled,
             }
         )
+
+    async def synchronize_controller(self):
+        """Synchronize runtime parameters with the controller."""
+
+        if not self.settings.use_external_temperature:
+            return
+
+        if self.forced_temperature is None:
+            return
+
+        new_temp = round(
+            self.forced_temperature,
+            1,
+        )
+
+        if new_temp == self.last_forced_temperature:
+            return
+
+        await self._post_command(
+            {
+                PARAM_FORCE_TEMP: f"{new_temp:.1f}",
+            }
+        )
+
+        self.last_forced_temperature = new_temp
 
     async def close(self):
         """Nothing to close."""

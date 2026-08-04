@@ -21,6 +21,7 @@ async def async_setup_entry(
         hass=hass,
         username=entry.data["username"],
         password=entry.data["password"],
+        options=entry.options,
     )
 
     coordinator = BioPoolCoordinator(

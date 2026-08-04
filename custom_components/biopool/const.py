@@ -65,6 +65,19 @@ PARAM_FORCE_BACTER = "force_bacter"
 PARAM_BACTER_SIZE = "bacter_size"
 PARAM_OXY_SIZE = "oxy_size"
 
+PARAM_FORCE_TEMP = "force_temp"
+
+# ------------------------------------------------------------------
+# Configuration
+# ------------------------------------------------------------------
+
+CONF_USE_EXTERNAL_TEMPERATURE = "use_external_temperature"
+CONF_TEMPERATURE_ENTITY = "temperature_entity"
+
+CONF_BACTER_SIZE = "bacter_size"
+CONF_OXY_SIZE = "oxy_size"
+CONF_UV_LIFETIME = "uv_lifetime"
+
 # ------------------------------------------------------------------
 # Valeurs par défaut
 # ------------------------------------------------------------------

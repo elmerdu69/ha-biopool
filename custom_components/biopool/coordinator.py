@@ -14,13 +14,14 @@ from .api import BioPoolAPI
 from .const import (
     DOMAIN,
     UPDATE_INTERVAL,
+    CONF_TEMPERATURE_ENTITY,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class BioPoolCoordinator(DataUpdateCoordinator[BioPoolAPI]):
-    """Coordinateur BioPool."""
+class BioPoolCoordinator(DataUpdateCoordinator):
+    """Coordinator for BioPool."""
 
     def __init__(
         self,
@@ -39,13 +40,74 @@ class BioPoolCoordinator(DataUpdateCoordinator[BioPoolAPI]):
 
         self.api = api
 
-    async def _async_update_data(self) -> BioPoolAPI:
-        """Récupère les dernières données."""
+        self._last_forced_temperature = object()
+
+    async def _async_update_data(self):
+        """Fetch data from BioPool."""
 
         try:
-            return await self.api.get_data()
+
+            if self.api.settings.use_external_temperature:
+
+                entity_id = self.api.settings.temperature_entity
+
+                if entity_id:
+
+                    state = self.hass.states.get(entity_id)
+
+                    if (
+                        state is not None
+                        and state.state not in (
+                            "unknown",
+                            "unavailable",
+                        )
+                    ):
+
+                        try:
+
+                            temperature = round(
+                                float(state.state),
+                                1,
+                            )
+
+                            if temperature != self._last_forced_temperature:
+
+                                await self.api.set_forced_temperature(
+                                    temperature
+                                )
+
+                                self._last_forced_temperature = temperature
+
+                        except (
+                            TypeError,
+                            ValueError,
+                        ):
+
+                            _LOGGER.warning(
+                                "Invalid temperature value from %s: %s",
+                                entity_id,
+                                state.state,
+                            )
+
+            else:
+
+                #
+                # Retour au mode estimation
+                #
+                if self._last_forced_temperature is not None:
+
+                    await self.api.set_forced_temperature(
+                        None
+                    )
+
+                    self._last_forced_temperature = None
+
+            await self.api.get_data()
+
+            return self.api
 
         except Exception as err:
+
             raise UpdateFailed(
                 f"Communication error: {err}"
             ) from err
