@@ -27,6 +27,7 @@ async def async_setup_entry(
     coordinator = BioPoolCoordinator(
         hass,
         api,
+        entry,
     )
 
     await coordinator.async_config_entry_first_refresh()

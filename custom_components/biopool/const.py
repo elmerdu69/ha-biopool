@@ -159,3 +159,6 @@ DEVICE_DEFINITIONS = {
     },
 
 }
+
+
+SENSOR_WATER_TEMP = "water_temp"

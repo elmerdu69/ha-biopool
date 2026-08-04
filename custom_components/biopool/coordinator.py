@@ -14,6 +14,7 @@ from .api import BioPoolAPI
 from .const import (
     DOMAIN,
     UPDATE_INTERVAL,
+    CONF_USE_EXTERNAL_TEMPERATURE,
     CONF_TEMPERATURE_ENTITY,
 )
 
@@ -27,6 +28,7 @@ class BioPoolCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         api: BioPoolAPI,
+        entry: ConfigEntry,
     ) -> None:
 
         super().__init__(
@@ -39,7 +41,7 @@ class BioPoolCoordinator(DataUpdateCoordinator):
         )
 
         self.api = api
-
+        self.config_entry = entry
         self._last_forced_temperature = object()
 
     async def _async_update_data(self):
@@ -47,52 +49,69 @@ class BioPoolCoordinator(DataUpdateCoordinator):
 
         try:
 
-            if self.api.settings.use_external_temperature:
+            options = self.config_entry.options
 
-                entity_id = self.api.settings.temperature_entity
+            use_external_temperature = options.get(
+                CONF_USE_EXTERNAL_TEMPERATURE,
+                False,
+            )
 
-                if entity_id:
+            entity_id = options.get(
+                CONF_TEMPERATURE_ENTITY,
+            )
 
-                    state = self.hass.states.get(entity_id)
+            if use_external_temperature and entity_id:
 
-                    if (
-                        state is not None
-                        and state.state not in (
-                            "unknown",
-                            "unavailable",
+                state = self.hass.states.get(
+                    entity_id
+                )
+
+                if (
+                    state is not None
+                    and state.state not in (
+                        "unknown",
+                        "unavailable",
+                    )
+                ):
+
+                    try:
+
+                        temperature = round(
+                            float(state.state),
+                            1,
                         )
-                    ):
 
-                        try:
-
-                            temperature = round(
-                                float(state.state),
-                                1,
-                            )
-
-                            if temperature != self._last_forced_temperature:
-
-                                await self.api.set_forced_temperature(
-                                    temperature
-                                )
-
-                                self._last_forced_temperature = temperature
-
-                        except (
-                            TypeError,
-                            ValueError,
+                        #
+                        # Envoie uniquement si la température change.
+                        #
+                        if (
+                            temperature
+                            != self._last_forced_temperature
                         ):
 
-                            _LOGGER.warning(
-                                "Invalid temperature value from %s: %s",
-                                entity_id,
-                                state.state,
+                            await self.api.set_forced_temperature(
+                                temperature
                             )
+
+                            self._last_forced_temperature = (
+                                temperature
+                            )
+
+                    except (
+                        TypeError,
+                        ValueError,
+                    ):
+
+                        _LOGGER.warning(
+                            "Invalid temperature value from %s: %s",
+                            entity_id,
+                            state.state,
+                        )
 
             else:
 
                 #
-                # Retour au mode estimation
+                # Retour au mode estimation.
                 #
                 if self._last_forced_temperature is not None:
 
@@ -102,6 +121,9 @@ class BioPoolCoordinator(DataUpdateCoordinator):
 
                     self._last_forced_temperature = None
 
+            #
+            # Lecture des données du contrôleur.
+            #
             await self.api.get_data()
 
             return self.api

@@ -10,16 +10,28 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
     UnitOfTime,
-    UnitOfVolume,
+    UnitOfTemperature,
+    PERCENTAGE,
 )
 
 from .const import (
     DEVICE_DEFINITIONS,
     DOMAIN,
+    CONF_BACTER_SIZE,
+    CONF_OXY_SIZE,
+    CONF_UV_LIFETIME,
+    DEFAULT_BACTER_SIZE,
+    DEFAULT_OXY_SIZE,
+    DEFAULT_UV_LIFETIME,
     FUNCTION_REACTOR,
+    FUNCTION_BACTER,
+    FUNCTION_OXY,
 )
 
-from .entity import BioPoolDeviceEntity
+from .entity import (
+    BioPoolControllerEntity,
+    BioPoolDeviceEntity,
+)
 
 
 async def async_setup_entry(
@@ -70,6 +82,13 @@ async def async_setup_entry(
                     "remaining",
                 )
             )
+
+    entities.append(
+        BioPoolControllerSensor(
+            coordinator,
+            "water_temp",
+        )
+    )
 
     async_add_entities(entities)
 
@@ -149,10 +168,31 @@ class BioPoolSensor(
             return self.device.runtime_h
 
         if self.sensor_type == "remaining":
-            return self.device.remaining
+
+            options = self.coordinator.config_entry.options
+
+            if self.device.function == FUNCTION_REACTOR:
+                maximum = options.get(CONF_UV_LIFETIME, DEFAULT_UV_LIFETIME)
+
+            elif self.device.function == FUNCTION_BACTER:
+                maximum = options.get(CONF_BACTER_SIZE, DEFAULT_BACTER_SIZE)
+
+            elif self.device.function == FUNCTION_OXY:
+                maximum = options.get(CONF_OXY_SIZE, DEFAULT_OXY_SIZE)
+
+            else:
+                return None
+
+            return round(
+                max(
+                    0,
+                    self.device.consumed / maximum * 100,
+                ),
+                1,
+            )
 
         return None
-
+    
     @property
     def native_unit_of_measurement(self):
 
@@ -166,7 +206,7 @@ class BioPoolSensor(
             return UnitOfTime.HOURS
 
         if self.sensor_type == "remaining":
-            return "%"
+            return PERCENTAGE
 
         return None
 
@@ -178,6 +218,9 @@ class BioPoolSensor(
 
         if self.sensor_type == "energy":
             return SensorDeviceClass.ENERGY
+
+        if self.sensor_type == "runtime":
+            return SensorDeviceClass.DURATION
 
         return None
 
@@ -223,3 +266,67 @@ class BioPoolSensor(
             super().available
             and self.device is not None
         )
+
+
+class BioPoolControllerSensor(
+    BioPoolControllerEntity,
+    SensorEntity,
+):
+    """Global controller sensors."""
+
+    def __init__(
+        self,
+        coordinator,
+        sensor_type: str,
+    ):
+
+        super().__init__(
+            coordinator,
+        )
+
+        self.sensor_type = sensor_type
+
+        self._attr_has_entity_name = True
+
+        self._attr_suggested_display_precision = 1
+
+    @property
+    def unique_id(self):
+
+        return self.sensor_type
+
+    @property
+    def name(self):
+
+        if self.sensor_type == "water_temp":
+            return "Température de l'eau"
+
+        return self.sensor_type
+
+    @property
+    def native_value(self):
+
+        if self.sensor_type == "water_temp":
+            return self.api.water_temp
+
+        return None
+
+    @property
+    def native_unit_of_measurement(self):
+
+        return UnitOfTemperature.CELSIUS
+
+    @property
+    def device_class(self):
+
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def state_class(self):
+
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def icon(self):
+
+        return "mdi:coolant-temperature"

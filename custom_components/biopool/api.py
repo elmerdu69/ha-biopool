@@ -16,9 +16,9 @@ from .settings import BioPoolSettings
 from .const import (
     BASE_URL,
     CMD_POWER,
-    DEFAULT_BACTER_SIZE,
-    DEFAULT_OXY_SIZE,
-    DEFAULT_UV_LIFETIME,
+    #DEFAULT_BACTER_SIZE,
+    #DEFAULT_OXY_SIZE,
+    #DEFAULT_UV_LIFETIME,
     DEVICE_DEFINITIONS,
     FUNCTION_BACTER,
     FUNCTION_OXY,
@@ -54,9 +54,9 @@ class BioPoolDevice:
 
     runtime_h: float = 0.0
 
-    remaining: float | None = None
+    #remaining: float | None = None
 
-    remaining_percent: float | None = None
+    #remaining_percent: float | None = None
 
     mode: str | None = None
 
@@ -149,10 +149,6 @@ class BioPoolDevice:
 
         return self.definition["remaining_sensor"]
 
-    @property
-    def settings(self):
-        return self.api.settings
-    
     def update_from_json(
         self,
         raw: dict,
@@ -200,63 +196,15 @@ class BioPoolDevice:
             self.consumed = 0
 
         #
-        # Calculs spécifiques
+        # Temps de fonctionnement
         #
         if self.function == FUNCTION_PUMP:
 
-            self.runtime_h = int(
-                self.consumed
-            )
+            self.runtime_h = int(self.consumed)
 
-            self.remaining = None
-
-        elif self.function == FUNCTION_REACTOR:
+        else:
 
             self.runtime_h = 0
-
-            self.remaining = max(
-                0,
-                min(
-                    100,
-                    (
-                        self.consumed
-                        / self.settings.uv_lifetime
-                        * 100
-                    ),
-                ),
-            )
-
-        elif self.function == FUNCTION_BACTER:
-
-            self.runtime_h = 0
-
-            self.remaining = max(
-                0,
-                min(
-                    100,
-                    (
-                        self.consumed
-                        / self.settings.bacter_size
-                        * 100
-                    ),
-                ),
-            )
-
-        elif self.function == FUNCTION_OXY:
-
-            self.runtime_h = 0
-
-            self.remaining = max(
-                0,
-                min(
-                    100,
-                    (
-                        self.consumed
-                        / self.settings.oxy_size
-                        * 100
-                    ),
-                ),
-            )
 
         #
         # Etats "force"
@@ -317,9 +265,10 @@ class BioPoolAPI:
         self.data: dict = {}
 
         #
-        # Mode courant
+        # Etat global du contrôleur
         #
         self.mode: str | None = None
+        self.water_temp: float | None = None
 
     async def login(self):
         """Authenticate."""
@@ -375,6 +324,9 @@ class BioPoolAPI:
 
         self.data = data
 
+        #
+        # Mode de fonctionnement
+        #
         self.mode = str(
             data.get(
                 PARAM_MODE,
@@ -382,9 +334,28 @@ class BioPoolAPI:
             )
         )
 
-        self._update_devices(data)
+        #
+        # Température estimée par le contrôleur
+        #
+        try:
 
-        return self
+            self.water_temp = float(
+                data.get(
+                    "water_temp"
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            self.water_temp = None
+
+        #
+        # Mise à jour des équipements
+        #
+        self._update_devices(data)
 
     async def set_forced_temperature(
         self,
