@@ -14,6 +14,7 @@ PLATFORMS = [
     "select",
     "sensor",
     "switch",
+    "number",
 ]
 
 # ------------------------------------------------------------------
@@ -162,3 +163,5 @@ DEVICE_DEFINITIONS = {
 
 
 SENSOR_WATER_TEMP = "water_temp"
+
+NUMBER_TEMP_OFFSET = "temp_offset"

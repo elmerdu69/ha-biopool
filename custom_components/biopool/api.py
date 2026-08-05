@@ -269,6 +269,7 @@ class BioPoolAPI:
         #
         self.mode: str | None = None
         self.water_temp: float | None = None
+        self.temp_offset: float | None = None
 
     async def login(self):
         """Authenticate."""
@@ -351,6 +352,22 @@ class BioPoolAPI:
         ):
 
             self.water_temp = None
+
+        #
+        # Offset de température
+        #
+        try:
+
+            self.temp_offset = float(
+                data.get("temp_offset")
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            self.temp_offset = 0.0
 
         #
         # Mise à jour des équipements
@@ -616,6 +633,26 @@ class BioPoolAPI:
         )
 
         self.last_forced_temperature = new_temp
+
+    async def set_temp_offset(
+        self,
+        value: float,
+    ):
+        """Change temperature offset."""
+
+        await self._post_command(
+            {
+                "temp_offset": round(
+                    value,
+                    1,
+                )
+            }
+        )
+
+        self.temp_offset = round(
+            value,
+            1,
+        )
 
     async def close(self):
         """Nothing to close."""
