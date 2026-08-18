@@ -6,6 +6,8 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 
+from homeassistant.helpers.restore_state import RestoreEntity
+
 from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
@@ -94,6 +96,7 @@ async def async_setup_entry(
 
 
 class BioPoolSensor(
+    RestoreEntity,
     BioPoolDeviceEntity,
     SensorEntity,
 ):
@@ -122,7 +125,7 @@ class BioPoolSensor(
             self._attr_suggested_display_precision = 2
 
         elif sensor_type == "runtime":
-            self._attr_suggested_display_precision = 0
+            self._attr_suggested_display_precision = 1
 
         elif sensor_type == "remaining":
             self._attr_suggested_display_precision = 1
@@ -181,6 +184,9 @@ class BioPoolSensor(
                 maximum = options.get(CONF_OXY_SIZE, DEFAULT_OXY_SIZE)
 
             else:
+                return None
+
+            if maximum <= 0:
                 return None
 
             return round(
@@ -266,6 +272,34 @@ class BioPoolSensor(
             super().available
             and self.device is not None
         )
+
+    async def async_added_to_hass(self):
+        """Restore previous sensor state."""
+
+        await super().async_added_to_hass()
+
+        if self.sensor_type != "energy":
+            return
+
+        last_state = await self.async_get_last_state()
+
+        if last_state is None:
+            return
+
+        try:
+
+            restored_energy = float(
+                last_state.state
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            return
+
+        self.device.energy_kwh = restored_energy
 
 
 class BioPoolControllerSensor(

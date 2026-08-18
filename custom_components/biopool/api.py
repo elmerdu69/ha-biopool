@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 from dataclasses import dataclass
 
@@ -16,9 +17,6 @@ from .settings import BioPoolSettings
 from .const import (
     BASE_URL,
     CMD_POWER,
-    #DEFAULT_BACTER_SIZE,
-    #DEFAULT_OXY_SIZE,
-    #DEFAULT_UV_LIFETIME,
     DEVICE_DEFINITIONS,
     FUNCTION_BACTER,
     FUNCTION_OXY,
@@ -53,10 +51,6 @@ class BioPoolDevice:
     energy_kwh: float = 0.0
 
     runtime_h: float = 0.0
-
-    #remaining: float | None = None
-
-    #remaining_percent: float | None = None
 
     mode: str | None = None
 
@@ -178,12 +172,18 @@ class BioPoolDevice:
         #
         # Energie
         #
-        try:
-            self.energy_kwh = float(
-                raw.get("energy", 0)
-            )
-        except (TypeError, ValueError):
-            self.energy_kwh = 0
+        if not self.supports_power_sensor:
+
+            try:
+                self.energy_kwh = float(
+                    raw.get("energy", 0)
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+
+                self.energy_kwh = 0.0
 
         #
         # Valeur "consumed"
@@ -200,7 +200,10 @@ class BioPoolDevice:
         #
         if self.function == FUNCTION_PUMP:
 
-            self.runtime_h = int(self.consumed)
+            self.runtime_h = round(
+                self.consumed,
+                1,
+            )
 
         else:
 
@@ -253,6 +256,8 @@ class BioPoolAPI:
 
         self.forced_temperature = None
         self.last_forced_temperature = None
+
+        self._last_energy_update: float | None = None
 
         #
         # Equipements découverts
@@ -373,6 +378,75 @@ class BioPoolAPI:
         # Mise à jour des équipements
         #
         self._update_devices(data)
+
+        #
+        # Calcul de l'énergie
+        #
+        now = time.monotonic()
+
+        if self._last_energy_update is None:
+
+            #
+            # Première lecture :
+            # on initialise simplement le chronomètre.
+            #
+            self._last_energy_update = now
+
+        else:
+
+            elapsed_seconds = (
+                now
+                - self._last_energy_update
+            )
+
+            self._last_energy_update = now
+
+            #
+            # Sécurité contre une durée aberrante.
+            #
+            if (
+                elapsed_seconds > 0
+                and elapsed_seconds < 3600
+            ):
+
+                for device in self.iter_devices():
+
+                    #
+                    # L'énergie est calculée uniquement
+                    # pour les équipements qui possèdent
+                    # un capteur de puissance.
+                    #
+                    if not device.supports_power_sensor:
+                        continue
+
+                    try:
+
+                        power_w = float(
+                            device.power_w
+                        )
+
+                    except (
+                        TypeError,
+                        ValueError,
+                    ):
+
+                        continue
+
+                    #
+                    # Aucun ajout si l'équipement
+                    # ne consomme pas.
+                    #
+                    if power_w <= 0:
+                        continue
+
+                    #
+                    # W × secondes → kWh
+                    #
+                    device.energy_kwh += (
+                        power_w
+                        * elapsed_seconds
+                        / 3_600_000
+                    )
 
     async def set_forced_temperature(
         self,
