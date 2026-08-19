@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 from dataclasses import dataclass
 
@@ -11,12 +12,11 @@ from homeassistant.helpers.aiohttp_client import (
     async_get_clientsession,
 )
 
+from .settings import BioPoolSettings
+
 from .const import (
     BASE_URL,
     CMD_POWER,
-    DEFAULT_BACTER_SIZE,
-    DEFAULT_OXY_SIZE,
-    DEFAULT_UV_LIFETIME,
     DEVICE_DEFINITIONS,
     FUNCTION_BACTER,
     FUNCTION_OXY,
@@ -29,6 +29,7 @@ from .const import (
     PARAM_MODE,
     PARAM_OXY_SIZE,
     POOL_MODES,
+    PARAM_FORCE_TEMP,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,10 +51,6 @@ class BioPoolDevice:
     energy_kwh: float = 0.0
 
     runtime_h: float = 0.0
-
-    remaining: float | None = None
-
-    remaining_percent: float | None = None
 
     mode: str | None = None
 
@@ -175,74 +172,42 @@ class BioPoolDevice:
         #
         # Energie
         #
-        try:
-            self.energy_kwh = float(
-                raw.get("energy", 0)
-            )
-        except (TypeError, ValueError):
-            self.energy_kwh = 0
+        if not self.supports_power_sensor:
+
+            try:
+                self.energy_kwh = float(
+                    raw.get("energy", 0)
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+
+                self.energy_kwh = 0.0
 
         #
         # Valeur "consumed"
         #
         try:
-            consumed = float(
+            self.consumed = float(
                 raw.get("consumed", 0)
             )
         except (TypeError, ValueError):
-            consumed = 0
-
-        bacter_size = float(
-            data.get(
-                PARAM_BACTER_SIZE,
-                DEFAULT_BACTER_SIZE,
-            )
-        )
-
-        oxy_size = float(
-            data.get(
-                PARAM_OXY_SIZE,
-                DEFAULT_OXY_SIZE,
-            )
-        )
+            self.consumed = 0
 
         #
-        # Calculs spécifiques
+        # Temps de fonctionnement
         #
         if self.function == FUNCTION_PUMP:
 
-            self.runtime_h = consumed
-            self.remaining = None
-
-        elif self.function == FUNCTION_REACTOR:
-
-            self.runtime_h = 0
-
-            self.remaining = (
-                consumed
-                / DEFAULT_UV_LIFETIME
-                * 100
+            self.runtime_h = round(
+                self.consumed,
+                1,
             )
 
-        elif self.function == FUNCTION_BACTER:
+        else:
 
             self.runtime_h = 0
-
-            self.remaining = (
-                consumed
-                / bacter_size
-                * 100
-            )
-
-        elif self.function == FUNCTION_OXY:
-
-            self.runtime_h = 0
-
-            self.remaining = (
-                consumed
-                / oxy_size
-                * 100
-            )
 
         #
         # Etats "force"
@@ -269,8 +234,9 @@ class BioPoolAPI:
     def __init__(
         self,
         hass,
-        username: str,
-        password: str,
+        username,
+        password,
+        options,
     ):
 
         self.hass = hass
@@ -284,6 +250,15 @@ class BioPoolAPI:
 
         self._equipment_id: str | None = None
 
+        self.settings = BioPoolSettings(
+            options
+        )
+
+        self.forced_temperature = None
+        self.last_forced_temperature = None
+
+        self._last_energy_update: float | None = None
+
         #
         # Equipements découverts
         #
@@ -295,9 +270,11 @@ class BioPoolAPI:
         self.data: dict = {}
 
         #
-        # Mode courant
+        # Etat global du contrôleur
         #
         self.mode: str | None = None
+        self.water_temp: float | None = None
+        self.temp_offset: float | None = None
 
     async def login(self):
         """Authenticate."""
@@ -353,6 +330,9 @@ class BioPoolAPI:
 
         self.data = data
 
+        #
+        # Mode de fonctionnement
+        #
         self.mode = str(
             data.get(
                 PARAM_MODE,
@@ -360,9 +340,135 @@ class BioPoolAPI:
             )
         )
 
+        #
+        # Température estimée par le contrôleur
+        #
+        try:
+
+            self.water_temp = float(
+                data.get(
+                    "water_temp"
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            self.water_temp = None
+
+        #
+        # Offset de température
+        #
+        try:
+
+            self.temp_offset = float(
+                data.get("temp_offset")
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            self.temp_offset = 0.0
+
+        #
+        # Mise à jour des équipements
+        #
         self._update_devices(data)
 
-        return self
+        #
+        # Calcul de l'énergie
+        #
+        now = time.monotonic()
+
+        if self._last_energy_update is None:
+
+            #
+            # Première lecture :
+            # on initialise simplement le chronomètre.
+            #
+            self._last_energy_update = now
+
+        else:
+
+            elapsed_seconds = (
+                now
+                - self._last_energy_update
+            )
+
+            self._last_energy_update = now
+
+            #
+            # Sécurité contre une durée aberrante.
+            #
+            if (
+                elapsed_seconds > 0
+                and elapsed_seconds < 3600
+            ):
+
+                for device in self.iter_devices():
+
+                    #
+                    # L'énergie est calculée uniquement
+                    # pour les équipements qui possèdent
+                    # un capteur de puissance.
+                    #
+                    if not device.supports_power_sensor:
+                        continue
+
+                    try:
+
+                        power_w = float(
+                            device.power_w
+                        )
+
+                    except (
+                        TypeError,
+                        ValueError,
+                    ):
+
+                        continue
+
+                    #
+                    # Aucun ajout si l'équipement
+                    # ne consomme pas.
+                    #
+                    if power_w <= 0:
+                        continue
+
+                    #
+                    # W × secondes → kWh
+                    #
+                    device.energy_kwh += (
+                        power_w
+                        * elapsed_seconds
+                        / 3_600_000
+                    )
+
+    async def set_forced_temperature(
+        self,
+        temperature: float | None,
+    ):
+        """Set or clear forced water temperature."""
+
+        if temperature is None:
+
+            await self._post_command(
+                {
+                    PARAM_FORCE_TEMP: None,
+                }
+            )
+
+        else:
+
+            await self._post_command(
+                {
+                    PARAM_FORCE_TEMP: f"{temperature:.1f}",
+                }
+            )
 
     def get_device(
         self,
@@ -421,16 +527,24 @@ class BioPoolAPI:
         if self._equipment_id is None:
             await self.login()
 
+        #
+        # Supprime les paramètres à None.
+        # Cela permet par exemple de retirer
+        # "force_temp" du contrôleur.
+        #
+        params = {
+            key: value
+            for key, value in params.items()
+            if value is not None or key == PARAM_FORCE_TEMP
+        }
+
         payload = {
             "db": "true",
             "name": self._equipment_id,
             "params": json.dumps(params),
         }
 
-        _LOGGER.debug(
-            "POST command: %s",
-            payload,
-        )
+        _LOGGER.debug("POST command: %s", payload)
 
         async with self._session.post(
             f"{BASE_URL}/api/bioconnect/command/{self._equipment_id}",
@@ -567,6 +681,51 @@ class BioPoolAPI:
             {
                 parameter: enabled,
             }
+        )
+
+    async def synchronize_controller(self):
+        """Synchronize runtime parameters with the controller."""
+
+        if not self.settings.use_external_temperature:
+            return
+
+        if self.forced_temperature is None:
+            return
+
+        new_temp = round(
+            self.forced_temperature,
+            1,
+        )
+
+        if new_temp == self.last_forced_temperature:
+            return
+
+        await self._post_command(
+            {
+                PARAM_FORCE_TEMP: f"{new_temp:.1f}",
+            }
+        )
+
+        self.last_forced_temperature = new_temp
+
+    async def set_temp_offset(
+        self,
+        value: float,
+    ):
+        """Change temperature offset."""
+
+        await self._post_command(
+            {
+                "temp_offset": round(
+                    value,
+                    1,
+                )
+            }
+        )
+
+        self.temp_offset = round(
+            value,
+            1,
         )
 
     async def close(self):

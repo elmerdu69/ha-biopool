@@ -6,6 +6,42 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 
 ---
 
+## [1.1.0] - 2026-08-19
+
+### Added
+
+- Added BioPool controller water temperature sensor (`water_temp`).
+- Added optional external Home Assistant temperature source.
+- Added forced temperature synchronization with the BioPool controller.
+- Added automatic return to controller-estimated temperature when external temperature is disabled.
+- Added temperature offset data (`temp_offset`).
+- Added configurable Bio-Bacter container size.
+- Added configurable Active Oxygen container size.
+- Added configurable UV lamp lifetime.
+- Added energy calculation from instantaneous power measurements.
+- Added energy state restoration after Home Assistant restart.
+- Added energy monitoring for equipment exposing a power sensor.
+
+### Changed
+
+- External temperature is synchronized only when its value changes.
+- Forced temperature is sent to the BioPool controller with one decimal place.
+- Pump runtime is displayed with one decimal place.
+- Energy calculation is now handled consistently for supported equipment.
+- Improved remaining lifetime and remaining quantity calculations.
+- Improved sensor units, device classes and state classes.
+
+### Fixed
+
+- Fixed energy counter persistence across Home Assistant restarts.
+- Fixed remaining value handling for UV, Bio-Bacter and Active Oxygen equipment.
+- Fixed sensor units and measurement metadata.
+- Fixed temperature forcing and removal of forced temperature.
+
+---
+
+[1.1.0]: https://github.com/elmerdu69/ha-biopool/releases/tag/v1.1.0
+
 ## [1.0.0] - 2026-08-02
 
 ### 🎉 Initial Release

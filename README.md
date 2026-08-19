@@ -12,10 +12,10 @@ Monitor and control your BioPool installation directly from Home Assistant.
 
 <p align="center">
 
-  ![GitHub release](https://img.shields.io/github/v/release/elmerdu69/ha-biopool)
-  ![GitHub Downloads](https://img.shields.io/github/downloads/elmerdu69/ha-biopool/total)
-  ![GitHub stars](https://img.shields.io/github/stars/elmerdu69/ha-biopool)
-  ![GitHub License](https://img.shields.io/github/license/elmerdu69/ha-biopool)
+![GitHub release](https://img.shields.io/github/v/release/elmerdu69/ha-biopool)
+![GitHub Downloads](https://img.shields.io/github/downloads/elmerdu69/ha-biopool/total)
+![GitHub stars](https://img.shields.io/github/stars/elmerdu69/ha-biopool)
+![GitHub License](https://img.shields.io/github/license/elmerdu69/ha-biopool)
 
 </p>
 
@@ -28,6 +28,8 @@ Monitor and control your BioPool installation directly from Home Assistant.
 * 💡 UV lamp control
 * 🧪 Bio-Bacter injection control
 * 🫧 Active Oxygen injection control
+* 🌡️ Pool water temperature monitoring
+* 🌡️ Optional external temperature source
 * ⚡ Real-time power consumption
 * 🔋 Energy monitoring
 * ⏱ Pump runtime monitoring
@@ -46,6 +48,8 @@ The integration automatically discovers and creates the following devices:
 ### Pool Controller
 
 * Operating mode selector
+* Water temperature
+* Optional external temperature source
 
 ### Filtration Pump
 
@@ -74,6 +78,30 @@ The integration automatically discovers and creates the following devices:
 * On/Off switch
 * Running status
 * Remaining product (%)
+
+---
+
+## Temperature
+
+The integration can use the temperature estimated by the BioPool controller.
+
+It is also possible to configure an external Home Assistant temperature sensor.
+
+When an external temperature sensor is enabled, its value is sent to the BioPool controller as the forced water temperature.
+
+The temperature is sent with one decimal place and is only synchronized with the controller when its value changes.
+
+When the external temperature option is disabled, the forced temperature is removed from the controller and the BioPool estimated temperature is used again.
+
+---
+
+## Energy monitoring
+
+The filtration pump and UV lamp expose energy sensors compatible with the Home Assistant Energy Dashboard.
+
+Energy is calculated from the instantaneous power reported by the BioPool equipment.
+
+Energy counters are restored after a Home Assistant restart so that accumulated consumption is preserved.
 
 ---
 
@@ -107,12 +135,18 @@ The integration will automatically discover your pool controller.
 
 ## Configuration
 
-Only your BioPool account credentials are required.
+The integration requires your BioPool account credentials.
 
 * Username
 * Password
 
-No additional configuration is necessary.
+Additional options are available from the integration configuration:
+
+* Use an external temperature entity
+* Select the external temperature entity
+* Bio-Bacter container size
+* Active Oxygen container size
+* UV lamp lifetime
 
 ---
 
@@ -164,25 +198,20 @@ The filtration pump and UV lamp expose energy sensors compatible with the Home A
 
 Tested with:
 
-* Home Assistant 2026.x
+* Home Assistant 2026.7.x
 * BioPool Connect Cloud
 
 ---
 
 ## Roadmap
 
-### Version 1.1
-
-* HACS support
-* Diagnostics
-* Better translations
-* Additional sensors
-
 ### Version 1.2
 
+* HACS support
 * Services
 * Advanced diagnostics
 * Additional pool statistics
+* Better translations
 
 ---
 

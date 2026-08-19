@@ -58,6 +58,10 @@ class BioPoolControllerEntity(
 
         }
 
+    @property
+    def api(self):
+        return self.coordinator.api
+
 
 class BioPoolDeviceEntity(
     BioPoolEntity,
