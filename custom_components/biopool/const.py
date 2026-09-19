@@ -99,7 +99,7 @@ DEVICE_DEFINITIONS = {
 
         "name": "Pompe filtration",
 
-        "icon": "mdi:water-pump",
+        "icon": "mdi:pump",
 
         "switch": True,
         "binary_sensor": True,
@@ -115,7 +115,7 @@ DEVICE_DEFINITIONS = {
 
         "name": "Lampe UV",
 
-        "icon": "mdi:lightbulb",
+        "icon": "mdi:lightbulb-fluorescent-tube",
 
         "switch": True,
         "binary_sensor": True,
