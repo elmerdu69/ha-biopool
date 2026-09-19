@@ -9,6 +9,7 @@ from .api import BioPoolDevice
 from .const import (
     DEVICE_DEFINITIONS,
     DOMAIN,
+    FUNCTION_PUMP,
 )
 from .entity import BioPoolDeviceEntity
 
@@ -79,6 +80,9 @@ class BioPoolBinarySensor(
 
     @property
     def icon(self):
+
+        if self.device.function == FUNCTION_PUMP:
+            return "mdi:pump" if self.is_on else "mdi:pump-off"
 
         return self.device.icon
 
