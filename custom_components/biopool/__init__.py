@@ -9,6 +9,7 @@ from .const import (
     PLATFORMS,
 )
 from .coordinator import BioPoolCoordinator
+from .settings import BioPoolSettings
 
 
 async def async_setup_entry(
@@ -42,7 +43,19 @@ async def async_setup_entry(
         PLATFORMS,
     )
 
+    entry.async_on_unload(entry.add_update_listener(async_update_options))
+
     return True
+
+
+async def async_update_options(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+) -> None:
+    """Apply updated settings without discarding runtime counters."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator.api.settings = BioPoolSettings(entry.options)
+    await coordinator.async_request_refresh()
 
 
 async def async_unload_entry(

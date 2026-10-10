@@ -11,6 +11,7 @@ UPDATE_INTERVAL = 60  # secondes
 
 PLATFORMS = [
     "binary_sensor",
+    "button",
     "select",
     "sensor",
     "switch",

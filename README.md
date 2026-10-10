@@ -198,14 +198,23 @@ The filtration pump and UV lamp expose energy sensors compatible with the Home A
 
 Tested with:
 
-* Home Assistant 2026.7.x
+* Home Assistant 2026.10.0 (1.2.0 consumable resets)
+* Home Assistant 2026.7.x (previous version)
 * BioPool Connect Cloud
 
 ---
 
+## Consumable replacement (1.2.0)
+
+Each treatment device exposes a **Reset to 100%** configuration button. Use it after replacing the Active Oxygen container, Bio-Bacter container or UV lamp. The integration sends the configured container capacity (liters) or UV lifetime (hours) to the controller and refreshes its state. Buttons can also be called with `button.press` in automations.
+
+Option changes take effect immediately. Light and dark integration logos require Home Assistant 2026.3 or later.
+
+Reset buttons do not provide a built-in confirmation dialog; confirmations can be configured on dashboard cards. The behavior of force buttons in manual mode is still under validation.
+
 ## Roadmap
 
-### Version 1.2
+### Future versions
 
 * HACS support
 * Services

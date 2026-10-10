@@ -82,7 +82,11 @@ class BioPoolBinarySensor(
     def icon(self):
 
         if self.device.function == FUNCTION_PUMP:
-            return "mdi:pump" if self.is_on else "mdi:pump-off"
+
+            if self.is_on:
+                return "mdi:pump"
+
+            return "mdi:pump-off"
 
         return self.device.icon
 

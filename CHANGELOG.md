@@ -6,6 +6,32 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 
 ---
 
+## 1.2.0 — 2026-10-10
+
+### Added
+
+- Reset-to-100% buttons for Active Oxygen, Bio-Bacter and UV lamp, attached to the corresponding devices.
+- Reset values use the container capacities and UV lifetime configured in integration options.
+- Local integration icons and logos for light and dark themes (Home Assistant 2026.3+).
+- French and English configuration and options translations.
+
+### Fixed
+
+- Apply option changes immediately without discarding runtime energy counters.
+- Load the button platform, use the correct force parameters and attach buttons to existing devices.
+- Correct the translations directory and the missing ConfigEntry import.
+
+### Changed
+
+- Dynamic pump icons and updated UV icon.
+
+### Validation and limitations
+
+- The three consumable resets were tested successfully on a real installation running Home Assistant 2026.10.0.
+- Python and JSON syntax validated; API commands and configurable reset values checked with simulated responses.
+- Force buttons send force_uv, force_oxy and force_bacter. Their behavior in manual mode is still under validation.
+- Reset buttons have no built-in confirmation dialog. Dashboard confirmations must be configured separately.
+
 ## [1.1.0] - 2026-08-19
 
 ### Added

@@ -1,0 +1,35 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to BioPool",
+        "description": "Configure your BioPool installation.",
+        "data": {
+          "username": "Email address",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect",
+      "unknown": "An unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This BioPool installation is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BioPool options",
+        "data": {
+          "use_external_temperature": "Use an external temperature",
+          "temperature_entity": "Water temperature sensor",
+          "bacter_size": "Bio-Bacter container capacity",
+          "oxy_size": "Active oxygen container capacity",
+          "uv_lifetime": "UV lamp lifetime"
+        }
+      }
+    }
+  }
+}
