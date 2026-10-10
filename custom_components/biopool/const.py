@@ -11,6 +11,7 @@ UPDATE_INTERVAL = 60  # secondes
 
 PLATFORMS = [
     "binary_sensor",
+    "button",
     "select",
     "sensor",
     "switch",
@@ -99,7 +100,7 @@ DEVICE_DEFINITIONS = {
 
         "name": "Pompe filtration",
 
-        "icon": "mdi:water-pump",
+        "icon": "mdi:pump",
 
         "switch": True,
         "binary_sensor": True,
@@ -115,7 +116,7 @@ DEVICE_DEFINITIONS = {
 
         "name": "Lampe UV",
 
-        "icon": "mdi:lightbulb",
+        "icon": "mdi:lightbulb-fluorescent-tube",
 
         "switch": True,
         "binary_sensor": True,

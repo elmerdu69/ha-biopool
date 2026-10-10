@@ -17,5 +17,19 @@
     "abort": {
       "already_configured": "Cette installation BioPool est déjà configurée"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options BioPool",
+        "data": {
+          "use_external_temperature": "Utiliser une température externe",
+          "temperature_entity": "Capteur de température de l’eau",
+          "bacter_size": "Contenance du bidon Bio-Bacter",
+          "oxy_size": "Contenance du bidon d’oxygène actif",
+          "uv_lifetime": "Durée de vie de la lampe UV"
+        }
+      }
+    }
   }
 }

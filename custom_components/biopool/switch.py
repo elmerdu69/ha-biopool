@@ -6,6 +6,7 @@ from .api import BioPoolDevice
 from .const import (
     DEVICE_DEFINITIONS,
     DOMAIN,
+    FUNCTION_PUMP,
 )
 from .entity import BioPoolDeviceEntity
 import asyncio
@@ -72,6 +73,13 @@ class BioPoolSwitch(
 
     @property
     def icon(self):
+
+        if self.device.function == FUNCTION_PUMP:
+
+            if self.is_on:
+                return "mdi:pump"
+
+            return "mdi:pump-off"
 
         return self.device.icon
 

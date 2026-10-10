@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import time
 
 from dataclasses import dataclass
@@ -521,6 +522,8 @@ class BioPoolAPI:
     async def _post_command(
         self,
         params: dict,
+        *,
+        device_name: str | None = None,
     ):
         """Send a generic command."""
 
@@ -540,7 +543,7 @@ class BioPoolAPI:
 
         payload = {
             "db": "true",
-            "name": self._equipment_id,
+            "name": device_name if device_name is not None else self._equipment_id,
             "params": json.dumps(params),
         }
 
@@ -565,6 +568,58 @@ class BioPoolAPI:
 
             except Exception:
                 return await response.text()
+
+    async def reset_oxygen_remaining(self):
+        """Record a full active oxygen container in the controller."""
+        await self.reset_container_remaining(FUNCTION_OXY)
+
+    async def reset_container_remaining(self, function: str):
+        """Record a full container using its configured capacity."""
+        capacities = {
+            FUNCTION_OXY: self.settings.oxy_size,
+            FUNCTION_BACTER: self.settings.bacter_size,
+        }
+        if function not in capacities:
+            raise ValueError(f"Unsupported consumable '{function}'")
+
+        device = self.get_device(function)
+        if device is None:
+            raise RuntimeError(f"Consumable equipment '{function}' is unavailable")
+
+        capacity = capacities[function]
+        if not math.isfinite(capacity) or capacity <= 0:
+            raise ValueError("Container capacity must be positive and finite")
+
+        await self._post_command(
+            {"consumed": format(capacity, "g")},
+            device_name=device.device_name,
+        )
+
+    async def reset_uv_remaining(self):
+        """Record a replacement UV lamp with its configured lifetime."""
+        if self._equipment_id is None:
+            await self.login()
+
+        device = self.get_device(FUNCTION_REACTOR)
+        if device is None:
+            raise RuntimeError("UV lamp equipment is unavailable")
+
+        duration = self.settings.uv_lifetime
+        if not math.isfinite(duration) or duration <= 0:
+            raise ValueError("UV lifetime must be positive and finite")
+
+        async with self._session.post(
+            f"{BASE_URL}/api/bioservice/resetUv",
+            json={
+                "device": device.device_name,
+                "uvDuration": duration,
+            },
+            headers={
+                "Origin": BASE_URL,
+                "Referer": f"{BASE_URL}/app/bioconnect/{self._equipment_id}",
+            },
+        ) as response:
+            response.raise_for_status()
 
     async def send_device_command(
         self,
